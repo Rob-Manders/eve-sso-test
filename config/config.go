@@ -8,7 +8,7 @@ type Config struct {
 	RedirectURI  string
 }
 
-func LoadConfig() *Config {
+func Load() *Config {
 	return &Config{
 		ClientID:     os.Getenv("CLIENT_ID"),
 		ClientSecret: os.Getenv("CLIENT_SECRET"),
