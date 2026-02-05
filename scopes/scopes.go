@@ -5,17 +5,19 @@ import (
 	"strings"
 )
 
-var scopes = []string{
+type Scopes []string
+
+var ScopeList = Scopes{
 	"esi-corporations.read_corporation_membership.v1",
 }
 
-func Compile() string {
-	s := ""
+func (s Scopes) Compile() string {
+	compiled := ""
 
-	for _, scope := range scopes {
-		s += fmt.Sprintf(" %s", scope)
+	for _, scope := range s {
+		compiled += fmt.Sprintf(" %s", scope)
 	}
 
-	s = strings.Trim(s, " ")
-	return s
+	compiled = strings.Trim(compiled, " ")
+	return compiled
 }
