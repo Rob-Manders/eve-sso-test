@@ -22,25 +22,18 @@ type Session struct {
 	SessionExpiry time.Time
 }
 
-func (s *Store) GetAccessToken(id string) (string, bool) {
+func Init() *Store {
+	return &Store{
+		sessions: make(map[string]Session),
+	}
+}
+
+func (s *Store) Get(id string) (Session, bool) {
 	s.mutex.Lock()
 	session, ok := s.sessions[id]
 	s.mutex.Unlock()
 
-	if !ok {
-		return "", false
-	}
-
-	currentTime := time.Now().Unix()
-	if session.TokenExpiry < currentTime-10 {
-		s.mutex.Lock()
-		delete(s.sessions, id)
-		s.mutex.Unlock()
-
-		return "", false
-	}
-
-	return session.AccessToken, ok
+	return session, ok
 }
 
 func (s *Store) Add(userID uuid.UUID, accessToken string, expiresIn int64) (string, time.Time) {
@@ -65,15 +58,4 @@ func (s *Store) Delete(id string) {
 	defer s.mutex.Unlock()
 
 	delete(s.sessions, id)
-}
-
-func (s *Store) ClearExpired() {
-	for id, session := range s.sessions {
-		currentTime := time.Now().Unix()
-		if session.TokenExpiry < currentTime-10 {
-			s.mutex.Lock()
-			delete(s.sessions, id)
-			s.mutex.Unlock()
-		}
-	}
 }

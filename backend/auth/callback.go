@@ -2,13 +2,10 @@ package auth
 
 import (
 	"encoding/json"
-	"evessotest/backend/token"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
-
-	"github.com/google/uuid"
 )
 
 const tokenURL = "https://login.eveonline.com/v2/oauth/token"
@@ -49,17 +46,16 @@ func (a *Auth) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var accessToken token.Token
+	var accessToken Token
 	err = json.Unmarshal(data, &accessToken)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	sessionCookie := a.createSession(accessToken)
+	userID := a.userDB.Create(accessToken.RefreshToken)
+	sessionCookie := a.createSession(userID, accessToken)
 	http.SetCookie(w, sessionCookie)
-
-	// TODO: Store refresh token somewhere.
 
 	http.Redirect(w, r, "http://localhost:8080/api/esi", http.StatusFound)
 }
@@ -68,7 +64,7 @@ func (a *Auth) buildTokenRequest(code string) (*http.Request, error) {
 	form := url.Values{}
 	form.Add("grant_type", "authorization_code")
 	form.Add("code", code)
-	form.Add("redirect_uri", a.config.RedirectURI)
+	form.Add("redirect_uri", a.credentials.RedirectURI)
 
 	request, err := http.NewRequest("POST", tokenURL, strings.NewReader(form.Encode()))
 	if err != nil {
@@ -79,23 +75,6 @@ func (a *Auth) buildTokenRequest(code string) (*http.Request, error) {
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	return request, nil
-}
-
-func (a *Auth) createSession(accessToken token.Token) *http.Cookie {
-	userID := uuid.New()
-	sessionID, sessionExpiry := a.sessionStore.Add(userID, accessToken.AccessToken, accessToken.ExpiresIn)
-
-	sessionCookie := &http.Cookie{
-		Name:     "session",
-		Value:    sessionID,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-		Expires:  sessionExpiry,
-	}
-
-	return sessionCookie
 }
 
 func validateState(r *http.Request) bool {

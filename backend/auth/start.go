@@ -18,8 +18,8 @@ func (a *Auth) Start(w http.ResponseWriter, r *http.Request) {
 
 	query := r.URL.Query()
 	query.Add("response_type", "code")
-	query.Add("client_id", a.config.ClientID)
-	query.Add("redirect_uri", a.config.RedirectURI)
+	query.Add("client_id", a.credentials.ClientID)
+	query.Add("redirect_uri", a.credentials.RedirectURI)
 	query.Add("scope", esiScopes)
 	query.Add("state", state)
 
