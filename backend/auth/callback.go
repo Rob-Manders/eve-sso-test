@@ -1,11 +1,14 @@
 package auth
 
 import (
-	"fmt"
+	"encoding/json"
+	"evessotest/backend/token"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 const tokenURL = "https://login.eveonline.com/v2/oauth/token"
@@ -46,8 +49,17 @@ func (a *Auth) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Save token to store and assign session cookie.
-	fmt.Println(string(data))
+	var accessToken token.Token
+	err = json.Unmarshal(data, &accessToken)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	sessionCookie := a.createSession(accessToken)
+	http.SetCookie(w, sessionCookie)
+
+	// TODO: Store refresh token somewhere.
 
 	http.Redirect(w, r, "http://localhost:8080/api/esi", http.StatusFound)
 }
@@ -67,6 +79,23 @@ func (a *Auth) buildTokenRequest(code string) (*http.Request, error) {
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	return request, nil
+}
+
+func (a *Auth) createSession(accessToken token.Token) *http.Cookie {
+	userID := uuid.New()
+	sessionID, sessionExpiry := a.sessionStore.Add(userID, accessToken.AccessToken, accessToken.ExpiresIn)
+
+	sessionCookie := &http.Cookie{
+		Name:     "session",
+		Value:    sessionID,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  sessionExpiry,
+	}
+
+	return sessionCookie
 }
 
 func validateState(r *http.Request) bool {

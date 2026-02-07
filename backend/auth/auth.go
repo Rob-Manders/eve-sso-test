@@ -2,8 +2,9 @@ package auth
 
 import (
 	"encoding/base64"
-	"evessotest/config"
-	"evessotest/scopes"
+	"evessotest/backend/config"
+	"evessotest/backend/scopes"
+	"evessotest/backend/session"
 	"fmt"
 	"net/http"
 )
@@ -11,9 +12,10 @@ import (
 const stateCookieName = "oauth_state"
 
 type Auth struct {
-	client *http.Client
-	config *config.Config
-	scopes scopes.Scopes
+	client       *http.Client
+	config       *config.Config
+	scopes       scopes.Scopes
+	sessionStore *session.Store
 }
 
 func Init(
